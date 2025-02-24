@@ -19,6 +19,6 @@ export class SeatAnalysisTab {
     async expectTotalAssignedReturned() {
         const totalAssigned = await this.totalAssignedValue.textContent();
         expect(totalAssigned).toBeDefined();
-        expect(parseInt(totalAssigned as string)).toBeGreaterThan(0);
+        expect(parseInt(totalAssigned as string)).toBeGreaterThanOrEqual(25);
     }
 }
