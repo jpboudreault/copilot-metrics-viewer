@@ -61,7 +61,7 @@ elevation="4" color="white" variant="elevated" class="mx-auto my-3"
                 <br>
                 <h2>All assigned seats </h2>
                 <br>
-            <v-data-table :headers="headers" :items="totalSeats" :items-per-page="10" class="elevation-2">
+            <v-data-table :headers="headers" :items="totalSeats" :items-per-page="25" class="elevation-2">
                 <template #item="{ item, index }">
                     <tr>
                         <td>{{ index + 1 }}</td>
