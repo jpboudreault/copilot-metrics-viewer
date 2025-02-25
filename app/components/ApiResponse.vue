@@ -27,6 +27,23 @@
           <pre ref="seatJsonText">{{ JSON.stringify(seats, null, 2) }}</pre>
       </v-card>
       <br>
+
+      <div class="copy-container">
+        <v-btn @click="fetchUserEmails">Fetch User Emails</v-btn>
+        <transition name="fade">
+          <div v-if="showEmailMessage" :class="{'copy-message': true, 'error': isError}">{{ emailMessage }}</div>
+        </transition>
+      </div>
+
+      <v-card max-height="575px" class="overflow-y-auto">
+          <pre ref="emailJsonText">{{ JSON.stringify(userEmails, null, 2) }}</pre>
+      </v-card>
+      <br>
+
+      <v-card max-height="575px" class="overflow-y-auto">
+          <pre ref="emailMapText">{{ JSON.stringify(userEmailsMap, null, 2) }}</pre>
+      </v-card>
+      <br>
   </v-container>
 </template>
 
@@ -50,6 +67,10 @@ export default defineComponent({
     seats: {
       type: Array,
       required: true
+    },
+    userEmailsMap: {
+      type: Object as () => Record<string, string>,
+      required: true
     }
   },
   data() {
@@ -57,8 +78,10 @@ export default defineComponent({
       showCopyMessage: false,
       showSeatMessage: false,
       showQualityMessage: false,
+      showEmailMessage: false,
       isError: false,
       message: '',
+      emailMessage: '',
       qualityMessage: ''
     };
   },
@@ -123,6 +146,46 @@ export default defineComponent({
       setTimeout(() => {
         this.showQualityMessage = false;
       }, 6000);
+    },
+
+    async fetchUserEmails() {
+      try {
+        const response = await fetch('/api/graphql', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.$config.githubToken}`
+          },
+          body: JSON.stringify({
+            query: `
+              query {
+                organization(login: "${this.$config.githubOrg}") {
+                  membersWithRole(first: 100) {
+                    nodes {
+                      login
+                      email
+                    }
+                  }
+                }
+              }
+            `
+          })
+        });
+
+        const data = await response.json();
+        this.userEmails = data.data.organization.membersWithRole.nodes;
+        this.emailMessage = 'User emails fetched successfully!';
+        this.isError = false;
+      } catch (error) {
+        this.emailMessage = 'Error fetching user emails!';
+        this.isError = true;
+        console.error('Error fetching user emails: ', error);
+      }
+
+      this.showEmailMessage = true;
+      setTimeout(() => {
+        this.showEmailMessage = false;
+      }, 3000);
     }
   }
 });

@@ -76,5 +76,46 @@ export default defineEventHandler(async (event) => {
     seatsData = seatsData.concat(response.seats.map((item: unknown) => new Seat(item)));
   }
 
+  // Fetch user emails using GraphQL
+  const userEmails = await fetchUserEmails(event.context.headers, config);
+
+  // Map user emails to seats
+  seatsData = seatsData.map(seat => {
+    const userEmail = userEmails.find(user => user.login === seat.login)?.email;
+    return { ...seat, email: userEmail };
+  });
+
   return seatsData;
 })
+
+async function fetchUserEmails(headers: Headers, config: any) {
+  try {
+    const response = await $fetch('/api/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': headers.get('Authorization')
+      },
+      body: JSON.stringify({
+        query: `
+          query {
+            organization(login: "${config.public.githubOrg}") {
+              membersWithRole(first: 100) {
+                nodes {
+                  login
+                  email
+                }
+              }
+            }
+          }
+        `
+      })
+    });
+
+    const data = await response.json();
+    return data.data.organization.membersWithRole.nodes;
+  } catch (error) {
+    console.error('Error fetching user emails: ', error);
+    return [];
+  }
+}

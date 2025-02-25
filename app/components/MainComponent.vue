@@ -62,7 +62,7 @@
             <SeatsAnalysisViewer v-if="item === 'seat analysis'" :seats="seats" />
             <ApiResponse
 v-if="item === 'api response'" :metrics="metrics" :original-metrics="originalMetrics"
-              :seats="seats" />
+              :seats="seats" :user-emails-map="userEmailsMap" />
           </v-card>
         </v-window-item>
         <v-alert
@@ -130,6 +130,7 @@ export default defineNuxtComponent({
     const originalMetrics = ref<CopilotMetrics[]>([]);
     const seatsReady = ref(false);
     const seats = ref<Seat[]>([]);
+    const userEmailsMap = ref<Record<string, string>>({});
     // API Error Message
     const apiError = ref<string | undefined>(undefined);
     const signInRequired = computed(() => {
@@ -186,12 +187,49 @@ export default defineNuxtComponent({
       seatsReady.value = true;
     }
 
+    const fetchUserEmails = async () => {
+      try {
+        const response = await fetch('/api/graphql', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${config.githubToken}`
+          },
+          body: JSON.stringify({
+            query: `
+              query {
+                organization(login: "${config.public.githubOrg}") {
+                  membersWithRole(first: 100) {
+                    nodes {
+                      login
+                      email
+                    }
+                  }
+                }
+              }
+            `
+          })
+        });
+
+        const data = await response.json();
+        userEmailsMap.value = data.data.organization.membersWithRole.nodes.reduce((map: Record<string, string>, user: { login: string, email: string }) => {
+          map[user.login] = user.email;
+          return map;
+        }, {});
+      } catch (error) {
+        console.error('Error fetching user emails: ', error);
+      }
+    };
+
+    await fetchUserEmails();
+
     return {
       metricsReady,
       metrics,
       originalMetrics,
       seatsReady,
       seats,
+      userEmailsMap,
       apiError,
       signInRequired,
       showLogoutButton,
